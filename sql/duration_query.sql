@@ -1,4 +1,4 @@
--- What drives delayed order fulfillment?
+-- What drives delayed order fulfillment? where?
 -- Make a querry of duration order_estimated_delivery_date
 
 WITH duration AS (
@@ -53,21 +53,50 @@ avg_durasi AS (
     AVG(carrier_duration) AS avg_carrier
   FROM duration_clean
 ),
+
+seller_unique AS (
+  SELECT
+    order_id,
+    ANY_VALUE(i.seller_id) AS seller_id,
+    ANY_VALUE(s.seller_city) AS seller_city,
+    
+  FROM `amplified-cache-495313-g5.Olist.order_items` i
+  LEFT JOIN `amplified-cache-495313-g5.Olist.sellers` s 
+  on i.seller_id = s.seller_id
+  GROUP BY order_id
+),
+joined AS (
+  SELECT
+    s.seller_id,
+    s.seller_city,
+    d.seller_duration,
+    d.seller_carrier_duration,
+    d.carrier_duration,
+    d.target_duration
+  FROM duration_clean d
+  LEFT JOIN seller_unique s
+    ON d.order_id = s.order_id
+),
+
 -- durasi waktu total lebih besar dibanding durasi target
 delay_orders AS (
   SELECT
-  order_id,
+  dc.seller_id,
+  dc.seller_city,
   seller_duration,
   seller_carrier_duration,
   carrier_duration,
   seller_duration + seller_carrier_duration + carrier_duration AS total_duration,
   target_duration
-  FROM duration_clean
+  FROM joined dc
+ 
   WHERE seller_duration + seller_carrier_duration + carrier_duration - target_duration > 0
 ),
+
 flag AS (
 SELECT
-  f.order_id,
+  f.seller_id,
+  f.seller_city,
   f.seller_duration,
   f.seller_carrier_duration,
   f.carrier_duration,
@@ -82,14 +111,18 @@ SELECT
   IF(f.carrier_duration > a.avg_carrier, 1, 0) AS carrier_above_avg
 FROM delay_orders f
 CROSS JOIN avg_durasi a
-)
 
+)
 -- SELECT *
--- FROM flag LIMIT 10;
+-- FROM joined
+-- LIMIT 10;
 
 SELECT
+seller_city,
 SUM (seller_above_avg) as count_seller_delay, --(approve/admin – invoiced/werehousing – processing /packing), 
 SUM (seller_carrier_above_avg)as count_seller_carrier_delay, --(shipping seller/dropping)
 SUM (carrier_above_avg)as count_carrier_delay, --(admin carrier/shipping carrier)
-count(order_id) AS total_delay_count
+COUNT(seller_id) AS total_delay_count
 FROM flag
+GROUP BY seller_city
+;
