@@ -58,5 +58,5 @@ Order Receiving Performance Analytics Dashboard. Analyze high-volume order trans
 - All three steps: 168 (2.2%)
 - None above delayed‑average: 1,677 (21.5%)
 
-**➡️ Most delayed orders (53.3%) show a single dominant step as the bottleneck, especially carrier → customer.**
+**➡️ Most delayed orders (45%) show a single dominant step as the bottleneck, especially carrier → customer.**
 **➡️ Multi‑step delays (pairs/triple) exist but are less common.**
